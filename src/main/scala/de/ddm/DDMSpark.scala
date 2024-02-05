@@ -5,7 +5,6 @@ import java.io.File
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 
-
 object DDMSpark extends App {
 
   override def main(args: Array[String]): Unit = {
@@ -61,13 +60,13 @@ object DDMSpark extends App {
     // Spark Tutorial
     //------------------------------------------------------------------------------------------------------------------
 
-    // Tutorial.execute(spark)
+    Tutorial.execute(spark)
 
     //------------------------------------------------------------------------------------------------------------------
     // Longest Common Substring Search
     //------------------------------------------------------------------------------------------------------------------
 
-    // time {LongestCommonSubstring.discoverLCSs("students2", spark)}
+    time {LongestCommonSubstring.discoverLCSs("students2", spark)}
 
     //------------------------------------------------------------------------------------------------------------------
     // Inclusion Dependency Discovery (Homework)
