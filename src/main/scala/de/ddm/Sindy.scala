@@ -2,27 +2,50 @@ package de.ddm
 
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
-object SINDyAlgorithm {
+object Sindy {
 
-  private def loadTimeSeriesData(inputPath: String, spark: SparkSession): Dataset[Row] = {
-    spark
-      .read
-      .option("inferSchema", "true")
+  private def readCSVData(inputPath: String, spark: SparkSession): Dataset[Row] = {
+    spark.read
+      .option("inferSchema", "false")
+      .option("header", "true")
+      .option("quote", "\"")
+      .option("delimiter", ";")
       .csv(inputPath)
   }
 
-  def applySINDyAlgorithm(inputPaths: List[String], spark: SparkSession): Unit = {
+  def discoverInclusionDependencies(inputPaths: List[String], spark: SparkSession): Unit = {
     import spark.implicits._
 
-    // Load and merge time series data
-    val combinedData = inputPaths.map(input => loadTimeSeriesData(input, spark))
-      .reduce((dataset1, dataset2) => dataset1.union(dataset2))
+    val combinedData =
+      inputPaths.map(input => readCSVData(input, spark))
+        .reduce((dataset1, dataset2) => dataset1.union(dataset2))
 
-    // Implement the SINDy algorithm for sparse identification of nonlinear dynamics
-    // TODO: Add your SINDy algorithm logic here
-    // ...
+    val allAttributes =
+      combinedData.columns
 
-    // Example: Display the combined time series data
-    combinedData.show()
+    val flattenedData =
+      combinedData.flatMap(row => for (i <- allAttributes.indices) yield (allAttributes(i), row.getString(i)))
+
+    val attributeSets =
+      flattenedData.groupByKey(t => t._2)
+        .mapGroups((_, iterator) => iterator.map(_._1).toSet)
+
+    val distinctAttributes =
+      attributeSets.flatMap(attributeSet =>
+        attributeSet.map(currentAttr =>
+          (currentAttr, attributeSet.filter(attr => attr != currentAttr)))
+      )
+
+    val groupedAttributes =
+      distinctAttributes.groupByKey(row => row._1)
+        .reduceGroups((_, iterator) => iterator.map(row => row._2).reduce((set1, set2) => set1.intersect(set2)))
+
+    val results =
+      groupedAttributes.collect()
+
+    results.sortBy(tuple => tuple._1)
+      .foreach { case (attribute, indSet) =>
+        if (indSet.nonEmpty) println(s"$attribute -> ${indSet.mkString(",")}")
+      }
   }
 }
