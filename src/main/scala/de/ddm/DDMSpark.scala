@@ -82,10 +82,9 @@ object DDMSpark extends App {
     }
 
     //------------------------------------------------------------------------------------------------------------------
-    // SINDy Algorithm Application
+    // IND Discovery using Sindy
     //------------------------------------------------------------------------------------------------------------------
 
-    val sindyInputPaths = getFiles(path.toString)
-    SINDyAlgorithm.applySINDyAlgorithm(sindyInputPaths, spark)
+    time {Sindy.discoverINDs(getFiles(path.toString), spark)}
   }
 }
