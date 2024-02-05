@@ -1,7 +1,9 @@
 package de.ddm
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.expressions.scalalang._
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.Row
 
 object Sindy {
 
@@ -22,14 +24,19 @@ object Sindy {
     val unionDF = tables.reduce(_ unionByName _)
 
     val attributeSets = unionDF
-      .flatMap(row => row.schema.fields.map(field => (field.name, row.getAs[String](field.name))))
+      .flatMap(row => {
+        val fieldNames = row.schema.fieldNames
+        fieldNames.flatMap(fieldName => Seq(fieldName -> row.getAs[String](fieldName)))
+      })
       .groupByKey { case (_, value) => value }
       .mapGroups { case (_, iterator) => iterator.map { case (attribute, _) => attribute }.toSet }
       .persist()
 
     val indResults = attributeSets
-      .flatMap { case (currentAttribute, attributeSet) =>
-        attributeSet.map(attribute => (currentAttribute, attributeSet - attribute))
+      .flatMap { case currentAttributeSet =>
+        currentAttributeSet.map(currentAttribute =>
+          (currentAttribute, currentAttributeSet - currentAttribute)
+        )
       }
       .groupByKey { case (currentAttribute, _) => currentAttribute }
       .mapGroups { case (currentAttribute, iterator) =>
